@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Day Planner</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #eef2f7;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      color: #333;
+    }
+    header {
+      background-color: #0052cc;
+      padding: 1.5rem;
+      text-align: center;
+      color: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    header h1 {
+      margin: 0 0 0.25rem 0;
+      font-weight: 700;
+      font-size: 2rem;
+      letter-spacing: 1px;
+    }
+    header p {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 500;
+      font-style: italic;
+      letter-spacing: 0.05em;
+    }
+    main {
+      flex: 1;
+      max-width: 720px;
+      width: 90%;
+      margin: 2rem auto 3rem auto;
+      background: white;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .time-block {
+      display: flex;
+      align-items: center;
+      border-left: 6px solid #ccc;
+      padding: 1rem;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+      border-bottom: 1px solid #eee;
+    }
+    .time-block:last-child {
+      border-bottom: none;
+      border-radius: 0 0 8px 8px;
+    }
+    .time-block.past {
+      background-color: #f0f0f0;
+      border-left-color: #a0a0a0;
+    }
+    .time-block.present {
+      background-color: #fff6f6;
+      border-left-color: #ff5c5c;
+      box-shadow: inset 0 0 10px rgba(255, 92, 92, 0.3);
+    }
+    .time-block.future {
+      background-color: #f6fff6;
+      border-left-color: #4caf50;
+    }
+    .hour {
+      width: 80px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #555;
+      user-select: none;
+    }
+    input.task {
+      flex: 1;
+      border: 1.8px solid #ccc;
+      border-radius: 6px;
+      padding: 0.6rem 1rem;
+      font-size: 1rem;
+      transition: border-color 0.3s ease;
+      margin: 0 1rem;
+      outline: none;
+      color: #333;
+    }
+    input.task:focus {
+      border-color: #0052cc;
+      box-shadow: 0 0 8px rgba(0, 82, 204, 0.3);
+    }
+    button.save-btn {
+      background-color: #0052cc;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button.save-btn:hover {
+      background-color: #003a99;
+    }
+    button.clear-btn {
+      display: block;
+      margin: 1rem auto 2rem auto;
+      padding: 0.75rem 1.5rem;
+      background-color: #d93025;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 1.05rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button.clear-btn:hover {
+      background-color: #a8271b;
+    }
+    .confirmation {
+      text-align: center;
+      font-size: 1.1rem;
+      color: #27632a;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      user-select: none;
+    }
+    .confirmation.visible {
+      opacity: 1;
+    }
+    @media (max-width: 480px) {
+      .hour {
+        width: 60px;
+        font-size: 1rem;
+      }
+      input.task {
+        font-size: 0.9rem;
+        margin: 0 0.6rem;
+      }
+      button.save-btn {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Day Planner</h1>
+    <p id="currentDay"></p>
+  </header>
+  <main>
+    <div id="planner"></div>
+    <div class="confirmation" id="confirmation">Task saved!</div>
+    <button class="clear-btn" id="clearBtn">Clear All Tasks</button>
+  </main>
+  <script>
+    const plannerEl = document.getElementById('planner');
+    const currentDayEl = document.getElementById('currentDay');
+    const confirmationEl = document.getElementById('confirmation');
+    const clearBtn = document.getElementById('clearBtn');
+
+    currentDayEl.textContent = new Date().toLocaleDateString(undefined, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
+
+    const workHours = [
+      "9 AM", "10 AM", "11 AM", "12 PM",
+      "1 PM", "2 PM", "3 PM", "4 PM", "5 PM"
+    ];
+
+    // Convert hour label like "9 AM" to 24hr format number
+    function hourTo24(hourString) {
+      let [h, modifier] = hourString.split(' ');
+      let hourNum = parseInt(h);
+      if (modifier === 'PM' && hourNum !== 12) hourNum += 12;
+      if (modifier === 'AM' && hourNum === 12) hourNum = 0;
+      return hourNum;
+    }
+
+    const now = new Date();
+    const currentHour = now.getHours();
+
+    // Create time blocks
+    workHours.forEach((hourLabel, i) => {
+      const hour24 = hourTo24(hourLabel);
+      const savedTask = localStorage.getItem(hourLabel) || '';
+
+      const block = document.createElement('div');
+      let timeClass = 'future';
+      if (hour24 < currentHour) timeClass = 'past';
+      else if (hour24 === currentHour) timeClass = 'present';
+      block.className = 'time-block ' + timeClass;
+
+      block.innerHTML = `
+        <div class="hour">${hourLabel}</div>
+        <input type="text" class="task" id="task-${i}" value="${savedTask}" placeholder="Add a task..." />
+        <button class="save-btn" aria-label="Save task for ${hourLabel}">Save</button>
+      `;
+
+      // Save button functionality
+      const saveBtn = block.querySelector('button.save-btn');
+      const inputEl = block.querySelector('input.task');
+      saveBtn.addEventListener('click', () => {
+        localStorage.setItem(hourLabel, inputEl.value.trim());
+        showConfirmation();
+      });
+
+      plannerEl.appendChild(block);
+    });
+
+    // Show confirmation message briefly
+    function showConfirmation() {
+      confirmationEl.classList.add('visible');
+      setTimeout(() => {
+        confirmationEl.classList.remove('visible');
+      }, 1800);
+    }
+
+    // Clear all tasks button
+    clearBtn.addEventListener('click', () => {
+      if (confirm('Are you sure you want to clear all tasks?')) {
+        workHours.forEach(hour => localStorage.removeItem(hour));
+        location.reload();
+      }
+    });
+  </script>
+</body>
+/* Let's create a modern, attractive planner website as a single HTML file with inline CSS and JavaScript. This planner will:
+- Show the current date
+- Display hourly time blocks from 9 AM to 5 PM
+- Allow you to add and save tasks to localStorage
+- Color code past, present, and future hours
+- Provide save buttons for each task
+- Include a clear all tasks button
+- Show confirmation message upon saving tasks */
+
+</html>
