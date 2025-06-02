@@ -6,4 +6,4 @@ Let's create a modern, attractive planner website as a single HTML file with inl
 - Color code past, present, and future hours
 - Provide save buttons for each task
 - Include a clear all tasks button
-- Show confirmation message upon saving tasks */
+- Show confirmation message upon saving tasks
